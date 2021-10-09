@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Images</title>
+</head>
+<body>
+
+<nav layout:fragment="breadcrumb" class="container">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="#">Home</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Images</li>
+    </ol>
+</nav>
+
+<div layout:fragment="content" class="container">
+    <h1>Images</h1>
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Name</th>
+            <th scope="col">Preview</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="image: ${images}">
+            <td th:text="${image.uuid}"/>
+            <td th:text="${image.filename}"/>
+            <td >
+                <img th:src="'/files/origin/'+${image.prefix}+'/'+${image.filename}" class="img-thumbnail" width="40px">
+            </td>
+
+        </tr>
+        </tbody>
+    </table>
+    <div th:replace="fragment/pagination :: pagination(pageable=${images})"></div>
+</div>
+
+</body>
+</html>

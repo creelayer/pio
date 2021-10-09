@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<header th:insert="fragment/header.html :: head"></header>
+<body>
+<div id="app">
+    <header th:insert="fragment/nav.html :: nav"></header>
+    <nav class="container">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/manage/node">Home</a></li>
+            <li class="breadcrumb-item"><a href="/manage/bucket">Buckets</a></li>
+            <li class="breadcrumb-item active" aria-current="page" th:text="${bucket.name}"></li>
+        </ol>
+    </nav>
+    <div class="container">
+        <h1 th:text="'Bucket: ' + ${bucket.name} + ': images'"></h1>
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Preview</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="item in items" :key="item.uuid">
+                <td>{{item.uuid}}</td>
+                <td>{{item.filename}}</td>
+                <td>
+                    <img v-bind:src="'/files/origin/'+item.prefix+'/'+item.filename" class="img-thumbnail" width="40px"
+                         @click="viewImage(item)">
+                </td>
+
+            </tr>
+            </tbody>
+        </table>
+        <div th:replace="fragment/pagination :: pagination"></div>
+    </div>
+
+    <modal v-if="showModal" @close="showModal = false">
+        <h3 slot="header">{{modalTitle}}</h3>
+        <div slot="body">
+            <div class="text-center">
+                <img v-bind:src="modalImageView" class="img-thumbnail ">
+            </div>
+        </div>
+    </modal>
+
+</div>
+<div th:replace="fragment/modal.html :: modal"></div>
+</body>
+</html>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            bucketUuid: '[[${bucket.uuid}]]',
+            items: [],
+            totalPages: 0,
+            currentPage: 0,
+            showModal: false,
+            modalTitle: "",
+            modalImageView: "",
+        },
+        methods: {
+            viewImage: function (item) {
+                this.showModal = true;
+                this.modalTitle = "Preview";
+                this.modalImageView = '/files/origin/' + item.prefix + '/' + item.filename;
+            },
+            pageChange: function (page) {
+                this._load(this.bucketUuid, page);
+            },
+            _load: function (uuid, page) {
+                axios
+                    .get('/v1/image/' + uuid + '?page=' + page)
+                    .then(response => {
+                        this.items = response.data.content;
+                        this.pageable = response.data.pageable;
+                        this.totalPages = response.data.totalPages;
+                    })
+            }
+        },
+        mounted() {
+            this._load(this.bucketUuid, this.currentPage);
+        }
+    })
+</script>

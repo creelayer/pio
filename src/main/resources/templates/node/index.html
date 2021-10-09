@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<header th:insert="fragment/header.html :: head"></header>
+<body>
+<div id="app">
+    <header th:insert="fragment/nav.html :: nav"></header>
+    <nav class="container">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">Home</li>
+        </ol>
+    </nav>
+    <div class="container">
+        <h1>Home</h1>
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Current</th>
+                <th scope="col">Master</th>
+                <th scope="col">Alive</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="item in items" :key="item.uuid">
+                <td>{{item.uuid}}</td>
+                <td>{{item.name}}</td>
+                <td>{{item.current}}</td>
+                <td>{{item.master}}</td>
+                <td>{{item.alive}}</td>
+            </tr>
+            </tbody>
+        </table>
+        <div th:replace="fragment/pagination :: pagination"></div>
+    </div>
+
+</div>
+</body>
+</html>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            items: [],
+            totalPages: 0,
+        },
+        methods: {
+            pageChange: function (page) {
+                this._load(page);
+            },
+            _load: function (page) {
+                axios
+                    .get('/v1/node?page=' + page)
+                    .then(response => {
+                        this.items = response.data.content;
+                        this.pageable = response.data.pageable;
+                        this.totalPages = response.data.totalPages;
+                    })
+            }
+        },
+        mounted() {
+            this._load();
+        }
+    })
+</script>

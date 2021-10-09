@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<header th:insert="fragment/header.html :: head"></header>
+<body>
+<div id="app">
+    <header th:insert="fragment/nav.html :: nav"></header>
+    <nav class="container">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/manage/node">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Buckets</li>
+        </ol>
+    </nav>
+    <div class="container">
+        <h1>Buckets</h1>
+        <button type="button" class="btn btn-primary" @click="showForm()">Create</button>
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="item in items" :key="item.uuid">
+                <td>{{item.uuid}}</td>
+                <td>{{item.name}}</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" @click="showForm(item.uuid)">edit</button>
+                    <button class="btn btn-success btn-sm" @click="viewBucket(item.uuid)">view</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div th:replace="fragment/pagination :: pagination"></div>
+    </div>
+
+
+    <modal v-if="showModal" @close="showModal = false">
+        <h3 slot="header">{{modalTitle}}</h3>
+        <div slot="body">
+            <form @submit.prevent="save">
+                <div class="mb-3">
+                    <label for="input1" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="input1" v-model="bucketName">
+                    <div class="form-text">We'll never share your email with anyone else.</div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </modal>
+
+</div>
+
+<div th:replace="fragment/modal.html :: modal"></div>
+
+
+</body>
+</html>
+
+<script>
+
+    new Vue({
+        el: '#app',
+        data: {
+            items: [],
+            totalPages: 0,
+            currentPage: 0,
+            bucketUuid: null,
+            bucketName: null,
+            showModal: false,
+            modalTitle: "",
+        },
+        methods: {
+            showForm: function (uuid) {
+                if (uuid) {
+                    axios
+                        .get('/v1/bucket/view/' + uuid)
+                        .then(response => {
+                            this.modalTitle = "Update bucket";
+                            this.bucketUuid = response.data.content.uuid;
+                            this.bucketName = response.data.content.name;
+                        })
+                } else {
+                    this.modalTitle = "Create bucket";
+                    this.bucketUuid = null;
+                    this.bucketName = null;
+                }
+
+                this.showModal = true;
+            },
+            save: function () {
+                const dto = {name: this.bucketName};
+                axios
+                    .post(this.bucketUuid ? '/v1/bucket/update/' + this.bucketUuid : '/v1/bucket/create', dto)
+                    .then(() => {
+                        this._load(this.currentPage);
+                        this.showModal = false;
+                    })
+            },
+            viewBucket:function (uuid){
+                window.location.href = '/manage/image/'+uuid;
+            },
+            pageChange: function (page) {
+                this._load(page);
+            },
+            _load: function (page) {
+                this.currentPage = page;
+                axios
+                    .get('/v1/bucket?page=' + page)
+                    .then(response => {
+                        this.items = response.data.content;
+                        this.pageable = response.data.pageable;
+                        this.totalPages = response.data.totalPages;
+                    })
+            }
+        },
+        mounted() {
+            this._load();
+        }
+    })
+</script>

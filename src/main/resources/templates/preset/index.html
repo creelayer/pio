@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<header th:insert="fragment/header.html :: head"></header>
+<body>
+<div id="app">
+    <header th:insert="fragment/nav.html :: nav"></header>
+    <nav class="container">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/manage/node">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Preset</li>
+        </ol>
+    </nav>
+    <div class="container">
+        <h1>Presets</h1>
+        <button type="button" class="btn btn-primary" @click="showForm()">Create</button>
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Width</th>
+                <th scope="col">Height</th>
+                <th scope="col">Quality</th>
+                <th scope="col">Mode</th>
+                <th scope="col">Description</th>
+                <th scope="col"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="item in items" :key="item.uuid">
+                <td>{{item.name}}</td>
+                <td>{{item.width}}</td>
+                <td>{{item.height}}</td>
+                <td>{{item.quality}}</td>
+                <td>{{item.mode}}</td>
+                <td>{{item.description}}</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" @click="showForm(item.uuid)">edit</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+
+    <modal v-if="showModal" @close="showModal = false">
+        <h3 slot="header">{{modalTitle}}</h3>
+        <div slot="body">
+            <form @submit.prevent="save">
+                <div class="mb-3">
+                    <label for="input1" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="input1" v-model="presetName">
+                    <div class="form-text">Only a-z allowed.</div>
+                </div>
+
+                <div class="row mb-3" >
+                    <div class="col-3">
+                            <label for="input2" class="form-label">Width</label>
+                            <input type="text" class="form-control" id="input2" v-model="presetWidth">
+                            <div class="form-text">Only a-z allowed.</div>
+                    </div>
+                    <div class="col-3">
+                        <label for="input3" class="form-label">Height</label>
+                        <input type="text" class="form-control" id="input3" v-model="presetHeight">
+                        <div class="form-text">Only a-z allowed.</div>
+                    </div>
+                    <div class="col-3">
+                        <label for="input4" class="form-label">Quality</label>
+                        <input type="text" class="form-control" id="input4" v-model="presetQuality">
+                        <div class="form-text">Only a-z allowed.</div>
+                    </div>
+                    <div class="col-3">
+                        <label for="input5" class="form-label">Mode</label>
+                        <input type="text" class="form-control" id="input5" v-model="presetMode">
+                        <div class="form-text">Only a-z allowed.</div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="input6" class="form-label">Description</label>
+                    <textarea class="form-control" id="input6" v-model="presetDescription"></textarea>
+                    <div class="form-text">Only a-z allowed.</div>
+                </div>
+                <button type="submit" class="btn btn-primary" >Save</button>
+            </form>
+        </div>
+    </modal>
+
+</div>
+
+<div th:replace="fragment/modal.html :: modal"></div>
+
+</body>
+</html>
+
+<script>
+
+    new Vue({
+        el: '#app',
+        data: {
+            items: [],
+            presetName: null,
+            presetDescription: null,
+            presetWidth: null,
+            presetHeight: null,
+            presetQuality: null,
+            presetMode: null,
+            showModal: false,
+            modalTitle: "",
+        },
+        methods: {
+            showForm: function (uuid) {
+                if (uuid) {
+                    axios
+                        .get('/v1/preset/view/' + uuid)
+                        .then(response => {
+                            this.modalTitle = "Update preset";
+                            this.presetUuid = response.data.content.uuid;
+                            this.presetName = response.data.content.name;
+                            this.presetDescription = response.data.content.description;
+                            this.presetWidth = response.data.content.width;
+                            this.presetHeight = response.data.content.height;
+                            this.presetQuality = response.data.content.quality;
+                            this.presetMode = response.data.content.mode;
+                        })
+                } else {
+                    this.modalTitle = "Create preset";
+                    this.presetUuid = null;
+                    this.presetName = null;
+                    this.presetDescription = null;
+                    this.presetWidth = null;
+                    this.presetHeight = null;
+                    this.presetQuality = null;
+                    this.presetMode = null;
+                }
+
+                this.showModal = true;
+            },
+            save: function () {
+                const dto = {
+                    name: this.presetName,
+                    description: this.presetDescription,
+                    width: this.presetWidth,
+                    height: this.presetHeight,
+                    quality: this.presetQuality,
+                    mode: this.presetMode
+                };
+                axios
+                    .post(this.presetUuid ? '/v1/preset/update/' + this.presetUuid : '/v1/preset/create', dto)
+                    .then(() => {
+                        this._load();
+                        this.showModal = false;
+                    })
+            },
+            _load: function () {
+                axios
+                    .get('/v1/preset')
+                    .then(response => {
+                        this.items = response.data.content;
+                    })
+            }
+        },
+        mounted() {
+            this._load();
+        }
+    })
+</script>
