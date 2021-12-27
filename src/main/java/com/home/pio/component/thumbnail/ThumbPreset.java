@@ -20,9 +20,8 @@ public class ThumbPreset {
         FIT_TO_HEIGHT
     }
 
-    private String name;
-    private short height;
-    private short width;
-    private Quality quality;
-    private Mode mode;
+    public short height;
+    public short width;
+    public Quality quality;
+    public Mode mode;
 }

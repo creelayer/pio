@@ -20,5 +20,4 @@ public class NodeController {
     public Page<Node> index(Pageable pageable){
         return nodeService.search(pageable);
     }
-
 }

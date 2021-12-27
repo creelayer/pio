@@ -2,59 +2,59 @@ package com.home.pio.component.thumbnail;
 
 import org.imgscalr.Scalr;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MimeType;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
 
 @Component
-public class ScalrThumbnail implements IThumbnail {
+public class ScalrThumbnail implements ThumbnailGenerator {
 
     @Override
-    public ByteArrayOutputStream generate(Path origin, ThumbPreset preset) throws IOException {
-        if (!Files.exists(origin)) {
-            throw new FileNotFoundException("Origin file not found.");
+    public ByteArrayOutputStream generate(ThumbPreset preset, MimeType mimeType, InputStream inputStream) throws ThumbnailException {
+        try {
+            BufferedImage image = ImageIO.read(inputStream);
+
+            BufferedImage buffer = Scalr.resize(
+                    image,
+                    method(preset.quality),
+                    mode(preset.mode),
+                    preset.width,
+                    preset.height
+            );
+
+            ByteArrayOutputStream thumbOutput = new ByteArrayOutputStream();
+            ImageIO.write(buffer, mimeType.getSubtype(), thumbOutput);
+            return thumbOutput;
+        } catch (IOException e) {
+            throw new ThumbnailException(e.getMessage());
         }
-        BufferedImage buffer = Scalr.resize(ImageIO.read(origin.toFile()),
-                method(preset),
-                mode(preset),
-                preset.getWidth(),
-                preset.getHeight());
-
-
-        ByteArrayOutputStream thumbOutput = new ByteArrayOutputStream();
-        String mimeType = Files.probeContentType(origin);
-        ImageIO.write(buffer, mimeType.split("/")[1], thumbOutput);
-        return thumbOutput;
     }
 
-    private Scalr.Method method(ThumbPreset preset) {
-        if (preset.getQuality().equals(ThumbPreset.Quality.LOW)) {
+    private Scalr.Method method(ThumbPreset.Quality quality) {
+        if (quality.equals(ThumbPreset.Quality.LOW)) {
             return Scalr.Method.SPEED;
-        } else if (preset.getQuality().equals(ThumbPreset.Quality.MEDIUM)) {
+        } else if (quality.equals(ThumbPreset.Quality.MEDIUM)) {
             return Scalr.Method.QUALITY;
-        } else if (preset.getQuality().equals(ThumbPreset.Quality.HIGH)) {
+        } else if (quality.equals(ThumbPreset.Quality.HIGH)) {
             return Scalr.Method.ULTRA_QUALITY;
         }
         throw new IllegalArgumentException("Quality method not found");
     }
 
-    private Scalr.Mode mode(ThumbPreset preset) {
-        if (preset.getMode().equals(ThumbPreset.Mode.AUTOMATIC)) {
+    private Scalr.Mode mode(ThumbPreset.Mode mode) {
+        if (mode.equals(ThumbPreset.Mode.AUTOMATIC)) {
             return Scalr.Mode.AUTOMATIC;
-        }else if (preset.getMode().equals(ThumbPreset.Mode.FIT)) {
+        } else if (mode.equals(ThumbPreset.Mode.FIT)) {
             return Scalr.Mode.FIT_EXACT;
-        } else if (preset.getMode().equals(ThumbPreset.Mode.FIT_TO_WIDTH)) {
+        } else if (mode.equals(ThumbPreset.Mode.FIT_TO_WIDTH)) {
             return Scalr.Mode.FIT_TO_WIDTH;
-        } else if (preset.getMode().equals(ThumbPreset.Mode.FIT_TO_HEIGHT)) {
+        } else if (mode.equals(ThumbPreset.Mode.FIT_TO_HEIGHT)) {
             return Scalr.Mode.FIT_TO_HEIGHT;
         }
-
-
         throw new IllegalArgumentException("Quality method not found");
     }
 

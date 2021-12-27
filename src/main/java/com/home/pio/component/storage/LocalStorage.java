@@ -1,53 +1,68 @@
 package com.home.pio.component.storage;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-@Component
-public class LocalStorage implements IStorage {
+public class LocalStorage implements Storage {
 
-    @Value("${upload.basePath}")
-    public Path basePath;
+    public static final int PREFIX_ITERATION = 3;
 
-    public void upload(Path path, MultipartFile uploadFile) throws IOException {
-        Files.createDirectories(path.getParent());
-        uploadFile.transferTo(path);
-    }
+    private final Path path;
 
-    public void save(Path path, ByteArrayOutputStream stream) throws IOException {
-        Files.createDirectories(path.getParent());
-        stream.writeTo(new FileOutputStream(path.toFile()));
+    public LocalStorage(Path path) {
+        this.path = path;
     }
 
     @Override
-    public Path path(FileStorage file) {
-        if (file.getPreset() == null) {
-            return Paths.get(
-                    basePath +
-                            File.separator +
-                            FileStorage.ORIGIN_PATH +
-                            File.separator +
-                            file.getPrefix() +
-                            File.separator +
-                            file.getFilename()
-            );
+    public FileLocalResource getByName(String filename) throws FileNotFoundException {
+        Path fullPath = getFullPath(filename);
+        if (!Files.exists(fullPath)) {
+            throw new FileNotFoundException("File not found");
         }
-        return Paths.get(
-                basePath +
-                        File.separator +
-                        FileStorage.CACHE_PATH +
-                        File.separator +
-                        file.getPreset() +
-                        File.separator +
-                        file.getPrefix() +
-                        File.separator +
-                        file.getFilename()
-        );
+        return new FileLocalResource(fullPath.getParent().toString(), filename, getPrefix(filename));
+    }
+
+    @Override
+    public FileLocalResource save(String filename, InputStream input) throws StorageException {
+        try {
+            Path fullPath = getFullPath(filename);
+            createStream(fullPath).write(input.readAllBytes());
+            return new FileLocalResource(fullPath.getParent().toString(), filename, getPrefix(filename));
+        } catch (IOException e) {
+            throw new StorageException(e.getMessage());
+        }
+    }
+
+    @Override
+    public FileLocalResource save(String filename, ByteArrayOutputStream stream) throws StorageException {
+        try {
+            Path fullPath = getFullPath(filename);
+            stream.writeTo(createStream(fullPath));
+            return new FileLocalResource(fullPath.getParent().toString(), filename, getPrefix(filename));
+        } catch (IOException e) {
+            throw new StorageException(e.getMessage());
+        }
+    }
+
+    private FileOutputStream createStream(Path fullPath) throws IOException {
+        Files.createDirectories(fullPath.getParent());
+        return new FileOutputStream(fullPath.toFile());
+    }
+
+    private Path getFullPath(String filename) {
+        return Paths.get(path.toString(), getPrefix(filename), filename);
+    }
+
+    private String getPrefix(String filename) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < PREFIX_ITERATION; i++) {
+            char c = filename.charAt(i);
+            if (i > 0) sb.append(java.io.File.separator);
+            sb.append(c);
+        }
+        return sb.toString();
     }
 }

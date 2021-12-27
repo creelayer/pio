@@ -5,9 +5,10 @@ import com.home.pio.entity.Bucket;
 import com.home.pio.entity.Image;
 import com.home.pio.service.UploadService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 @AllArgsConstructor
@@ -17,8 +18,8 @@ public class UploadController {
 
     private UploadService uploadService;
 
-    @PostMapping("single/{bucket}")
-    public Response<Image> upload(@PathVariable Bucket bucket, @RequestParam("file") MultipartFile file) throws IOException {
-        return new Response<>(uploadService.upload(bucket, file));
+    @PostMapping(value = "single/{bucket}", consumes = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
+    public Response<Image> upload(@PathVariable Bucket bucket, HttpServletRequest request) throws IOException {
+        return new Response<>(uploadService.upload(bucket, request));
     }
 }

@@ -1,55 +1,43 @@
 package com.home.pio.service;
 
-import com.home.pio.component.storage.FileStorage;
-import com.home.pio.component.storage.IStorage;
-import com.home.pio.component.thumbnail.IThumbnail;
+import com.home.pio.component.storage.FileResource;
+import com.home.pio.component.thumbnail.ThumbnailGenerator;
 import com.home.pio.component.thumbnail.ThumbPreset;
-import com.home.pio.entity.Image;
 import com.home.pio.entity.Preset;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import javax.persistence.EntityNotFoundException;
+import java.io.*;
 
 @Service
 public class ThumbnailService {
 
-    private final IThumbnail thumbnailGenerator;
-    private final IStorage storage;
+    private final ThumbnailGenerator thumbnailGenerator;
+    private final PresetService presetService;
+    private final FileService fileService;
 
-    public ThumbnailService(IThumbnail thumbnailGenerator, IStorage storage) {
+    public ThumbnailService(ThumbnailGenerator thumbnailGenerator, PresetService presetService, FileService fileService) {
         this.thumbnailGenerator = thumbnailGenerator;
-        this.storage = storage;
+        this.presetService = presetService;
+        this.fileService = fileService;
     }
 
-    public Path generate(Preset preset, Image image) throws IOException {
-        Path original = storage.path(new FileStorage().setPrefix(image.prefix).setFilename(image.filename));
-        if (!Files.exists(original)) {
-            throw new FileNotFoundException();
+    public FileResource generate(String presetName, String filename) throws FileNotFoundException {
+        try {
+            return fileService.getCache(filename);
+        } catch (FileNotFoundException e) {
+            FileResource fileResource = fileService.getOrigin(filename);
+            Preset preset = presetService.findOne(presetName).orElseThrow(EntityNotFoundException::new);
+            ThumbPreset thumbPreset = new ThumbPreset()
+                    .setHeight(preset.height)
+                    .setWidth(preset.width)
+                    .setQuality(preset.quality)
+                    .setMode(preset.mode);
+
+            ByteArrayOutputStream outputStream = thumbnailGenerator.generate(thumbPreset, MimeType.valueOf(fileResource.getMimeType()), fileResource.getInputStream());
+            return fileService.cache(fileResource.getFilename(), outputStream);
         }
-
-        ByteArrayOutputStream output = thumbnailGenerator.generate(
-                original,
-                new ThumbPreset()
-                        .setName(preset.name)
-                        .setHeight(preset.height)
-                        .setWidth(preset.width)
-                        .setQuality(preset.quality)
-                        .setMode(preset.mode)
-        );
-
-        Path thumbPath = storage.path(
-                new FileStorage()
-                .setPreset(preset.name)
-                .setPrefix(image.prefix)
-                .setFilename(image.filename)
-        );
-
-        storage.save(thumbPath, output);
-        return thumbPath;
     }
 
 }
